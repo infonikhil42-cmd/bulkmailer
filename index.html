@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Engine Bulk Mailer Pro</title>
+    <!-- Tailwind CSS for Dark Royal UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS for Smart Excel Scanning -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-4 md:p-8 font-sans">
+
+    <div class="max-w-5xl mx-auto space-y-6">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-violet-900/60 to-fuchsia-900/40 border border-violet-500/30 rounded-2xl p-6 flex flex-col md:flex-row justify-between items-center gap-4 shadow-lg">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-cyan-300">
+                    ⚡ Multi-Sender Bulk Mailer Portal
+                </h1>
+                <p class="text-slate-400 text-sm mt-1">Smart 5-Email Rotation • Auto Excel Scanner • Anti-Spam Delay</p>
+            </div>
+            <div class="bg-slate-900/90 border border-violet-500/40 px-5 py-3 rounded-xl text-center">
+                <span class="text-xs text-slate-400 uppercase tracking-wider block">Ready Unique Emails</span>
+                <span id="totalBadge" class="text-2xl font-black text-cyan-400">0</span>
+            </div>
+        </div>
+
+        <!-- SECTION 1: 5 SENDER ACCOUNTS (ROUND-ROBIN) -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <h2 class="text-lg font-bold text-violet-300">1. Apne Sender Emails Daalo (1 se 5 Gmail IDs)</h2>
+                    <p class="text-xs text-slate-400">Abhi test ke liye 1 Gmail daal lo. Baad mein 5 daal dena, code apne aap Bari-Bari (1-2-3-4-5) ghumayega!</p>
+                </div>
+                <button onclick="addSenderRow()" class="bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold px-4 py-2 rounded-lg transition">
+                    + Add Another Email
+                </button>
+            </div>
+
+            <div id="senderContainer" class="space-y-3">
+                <!-- Pehla Row Default -->
+                <div class="sender-row grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                    <input type="text" placeholder="Brand Name (e.g. Special Offer)" class="sender-name bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:border-violet-500 outline-none">
+                    <input type="email" placeholder="Sender Gmail (e.g. abc@gmail.com)" class="sender-email bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:border-violet-500 outline-none">
+                    <input type="password" placeholder="16-Digit Google App Password" class="sender-pass bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:border-violet-500 outline-none">
+                    <input type="text" placeholder="SMTP Host (Leave blank for Gmail)" class="sender-host bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:border-violet-500 outline-none">
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 2: RECIPIENTS (MANUAL PASTE + EXCEL UPLOAD) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Manual Paste Box -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+                <h2 class="text-lg font-bold text-violet-300 mb-1">2A. Manual Copy-Paste Emails</h2>
+                <p class="text-xs text-slate-400 mb-3">20-25 emails hain? Sidha yahan paste kar do (comma, space ya line kuch bhi chalega).</p>
+                <textarea id="manualEmails" rows="6" oninput="extractAllEmails()" placeholder="rahul@gmail.com&#10;priya@yahoo.com, amit@domain.com" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm focus:border-cyan-400 outline-none"></textarea>
+            </div>
+
+            <!-- Smart Excel Upload Box -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
+                <div>
+                    <h2 class="text-lg font-bold text-violet-300 mb-1">2B. Ya Excel / CSV File Upload Karo</h2>
+                    <p class="text-xs text-slate-400 mb-4">File mein kahin bhi email chhupa ho, humara scanner khud dhoondh ke nikal lega!</p>
+                    
+                    <label class="border-2 border-dashed border-violet-500/40 hover:border-cyan-400 bg-slate-950 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition">
+                        <span class="text-3xl mb-2">📂</span>
+                        <span id="excelFileName" class="text-sm font-semibold text-slate-300">Click to Upload .xlsx or .csv file</span>
+                        <span class="text-xs text-slate-500 mt-1">Auto-removes duplicates & invalid emails</span>
+                        <input type="file" id="excelInput" accept=".xlsx,.xls,.csv" onchange="handleExcelUpload(event)" class="hidden">
+                    </label>
+                </div>
+
+                <div class="mt-4 bg-slate-950 p-3 rounded-xl border border-slate-800 flex justify-between items-center">
+                    <span class="text-xs text-slate-400">Excel se mile emails: <b id="excelCount" class="text-cyan-400">0</b></span>
+                    <button onclick="clearRecipients()" class="text-xs text-rose-400 hover:underline">Clear All List</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 3: COMPOSE MESSAGE & ATTACHMENT -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+            <h2 class="text-lg font-bold text-violet-300">3. Offer Message & Poster Write Karo</h2>
+            
+            <div>
+                <label class="text-xs text-slate-400 block mb-1">Email Subject Line (Spam words mat likhna)</label>
+                <input type="text" id="subject" placeholder="e.g. Special 50% Discount Invitation For You!" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm focus:border-violet-500 outline-none">
+            </div>
+
+            <div>
+                <label class="text-xs text-slate-400 block mb-1">Main Offer Message</label>
+                <textarea id="message" rows="5" placeholder="Hello!&#10;&#10;Hum apne special customers ko flat 50% OFF de rahe hain. Niche attached photo mein apna coupon dekhein..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm focus:border-violet-500 outline-none"></textarea>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                <!-- Photo / File Attachment -->
+                <div class="bg-slate-950 border border-slate-800 p-3 rounded-xl">
+                    <label class="text-xs text-slate-400 block mb-1">📎 Offer Photo / PDF Attach Karo (Optional)</label>
+                    <input type="file" id="attachmentInput" class="text-xs text-slate-300 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-violet-600 file:text-white hover:file:bg-violet-500">
+                </div>
+
+                <!-- Safety Gap Timer -->
+                <div class="bg-slate-950 border border-slate-800 p-3 rounded-xl flex items-center justify-between">
+                    <div>
+                        <label class="text-xs text-slate-400 block">⏱️ Har Mail Ke Beech Gap (Seconds)</label>
+                        <span class="text-[11px] text-emerald-400">Recommended: 4 sec (Human Speed)</span>
+                    </div>
+                    <input type="number" id="delaySeconds" value="4" min="2" max="60" class="w-20 bg-slate-900 border border-slate-700 rounded-lg p-2 text-center font-bold text-cyan-400">
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 4: ACTION BUTTONS & LIVE MONITOR -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+            <div class="flex flex-col md:flex-row gap-4">
+                <button id="startBtn" onclick="startCampaign()" class="flex-1 bg-gradient-to-r from-violet-600 to-cyan-500 hover:from-violet-500 hover:to-cyan-400 text-slate-950 font-black py-4 rounded-xl text-lg shadow-lg transition">
+                    🚀 START AUTOMATIC CAMPAIGN
+                </button>
+                <button onclick="stopCampaign()" class="bg-rose-600/20 border border-rose-500/40 hover:bg-rose-600 text-rose-300 hover:text-white font-bold px-6 py-4 rounded-xl transition">
+                    🛑 STOP
+                </button>
+            </div>
+
+            <!-- Progress Stats -->
+            <div class="grid grid-cols-3 gap-4 text-center bg-slate-950 p-4 rounded-xl border border-slate-800">
+                <div>
+                    <span class="text-xs text-slate-400 block">Total Ready</span>
+                    <span id="statTotal" class="text-xl font-bold text-slate-200">0</span>
+                </div>
+                <div>
+                    <span class="text-xs text-slate-400 block">Successfully Sent ✅</span>
+                    <span id="statSent" class="text-xl font-bold text-emerald-400">0</span>
+                </div>
+                <div>
+                    <span class="text-xs text-slate-400 block">Failed ❌</span>
+                    <span id="statFailed" class="text-xl font-bold text-rose-400">0</span>
+                </div>
+            </div>
+
+            <!-- Live Terminal Log -->
+            <div class="bg-black/80 border border-slate-800 rounded-xl p-4 font-mono text-xs h-48 overflow-y-auto space-y-1" id="logBox">
+                <div class="text-slate-500">System Ready... Waiting to start campaign.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let excelExtractedEmails = [];
+        let finalUniqueEmails = [];
+        let statusInterval = null;
+
+        // 5 Sender tak add karne ka function
+        function addSenderRow() {
+            const container = document.getElementById('senderContainer');
+            if (container.children.length >= 5) {
+                alert('Bhai, 5 Email IDs kaafi hain 1,500 roz bhejne ke liye!');
+                return;
+            }
+            const div = document.createElement('div');
+            div.className = 'sender-row grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800';
+            div.innerHTML = `
+                <input type="text" placeholder="Brand Name" class="sender-name bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:border-violet-500 outline-none">
+                <input type="email" placeholder="Sender Gmail" class="sender-email bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:border-violet-500 outline-none">
+                <input type="password" placeholder="16-Digit App Password" class="sender-pass bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:border-violet-500 outline-none">
+                <div class="flex gap-2">
+                    <input type="text" placeholder="SMTP Host (Optional)" class="sender-host flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:border-violet-500 outline-none">
+                    <button onclick="this.parentElement.parentElement.remove()" class="bg-rose-900/50 text-rose-300 px-3 rounded-lg hover:bg-rose-700">✕</button>
+                </div>
+            `;
+            container.appendChild(div);
+        }
+
+        // Smart Regex Function jo kachre mein se bhi Valid Email nikal lega
+        function findEmailsInText(text) {
+            const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+            return text.match(emailRegex) || [];
+        }
+
+        // Excel File Padhne Wala Jadoo
+        function handleExcelUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            document.getElementById('excelFileName').innerText = "✅ Loaded: " + file.name;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                let found = [];
+
+                // Excel ki har sheet aur har cell ko scan karega
+                workbook.SheetNames.forEach(sheetName => {
+                    const sheet = workbook.Sheets[sheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                    jsonData.forEach(row => {
+                        row.forEach(cell => {
+                            if (cell) {
+                                const matches = findEmailsInText(String(cell));
+                                found.push(...matches);
+                            }
+                        });
+                    });
+                });
+
+                excelExtractedEmails = found.map(e => e.toLowerCase().trim());
+                document.getElementById('excelCount').innerText = excelExtractedEmails.length;
+                extractAllEmails();
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // Manual + Excel ko mila kar Duplicate hatane wala function
+        function extractAllEmails() {
+            const manualText = document.getElementById('manualEmails').value;
+            const manualFound = findEmailsInText(manualText).map(e => e.toLowerCase().trim());
+            
+            const combined = [...manualFound, ...excelExtractedEmails];
+            finalUniqueEmails = [...new Set(combined)]; // Removes Duplicates Automatically!
+
+            document.getElementById('totalBadge').innerText = finalUniqueEmails.length;
+            document.getElementById('statTotal').innerText = finalUniqueEmails.length;
+        }
+
+        function clearRecipients() {
+            document.getElementById('manualEmails').value = '';
+            document.getElementById('excelInput').value = '';
+            document.getElementById('excelFileName').innerText = 'Click to Upload .xlsx or .csv file';
+            document.getElementById('excelCount').innerText = '0';
+            excelExtractedEmails = [];
+            extractAllEmails();
+        }
+
+        // Backend ko Data Bhejna
+        async function startCampaign() {
+            // Senders collect karo
+            const senderRows = document.querySelectorAll('.sender-row');
+            const senders = [];
+            senderRows.forEach(row => {
+                const name = row.querySelector('.sender-name').value;
+                const email = row.querySelector('.sender-email').value;
+                const password = row.querySelector('.sender-pass').value;
+                const host = row.querySelector('.sender-host').value;
+                if (email && password) {
+                    senders.push({ name, email, password, host });
+                }
+            });
+
+            if (senders.length === 0) {
+                alert('Bhai, kam se kam 1 Sender Gmail aur uska 16-digit App Password toh daalo!');
+                return;
+            }
+            if (finalUniqueEmails.length === 0) {
+                alert('Kisko bhejna hai? Manual box mein email paste karo ya Excel file upload karo!');
+                return;
+            }
+
+            const subject = document.getElementById('subject').value;
+            const message = document.getElementById('message').value;
+            if (!subject || !message) {
+                alert('Subject aur Offer Message dono likhna zaroori hai!');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('senders', JSON.stringify(senders));
+            formData.append('recipients', JSON.stringify(finalUniqueEmails));
+            formData.append('subject', subject);
+            formData.append('message', message);
+            formData.append('delaySeconds', document.getElementById('delaySeconds').value);
+
+            const fileInput = document.getElementById('attachmentInput');
+            if (fileInput.files[0]) {
+                formData.append('attachment', fileInput.files[0]);
+            }
+
+            const res = await fetch('/send-campaign', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                if (statusInterval) clearInterval(statusInterval);
+                statusInterval = setInterval(pollStatus, 1500);
+            } else {
+                alert(data.error || 'Error starting campaign');
+            }
+        }
+
+        async function pollStatus() {
+            const res = await fetch('/status');
+            const data = await res.json();
+
+            document.getElementById('statTotal').innerText = data.total;
+            document.getElementById('statSent').innerText = data.sent;
+            document.getElementById('statFailed').innerText = data.failed;
+
+            const logBox = document.getElementById('logBox');
+            logBox.innerHTML = data.logs.map(l => `<div>${l}</div>`).join('');
+
+            if (!data.isRunning && statusInterval) {
+                clearInterval(statusInterval);
+            }
+        }
+
+        async function stopCampaign() {
+            await fetch('/stop', { method: 'POST' });
+            pollStatus();
+        }
+    </script>
+</body>
+</html>
